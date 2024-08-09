@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/prajodh/goServerScratch/database"
 	// "errors"
 )
 
-
+const databaseUrl string = "./database.json"
 type apiConfig struct {
 	fileserverHits int
 }
@@ -39,12 +43,13 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, R *http.Request){
 	w.Write([]byte(val))
 }
 
-func writeResponseValidateChrip(v bool, errs string) []byte {
+func writeResponseValidateChrip(v bool, errs string, msg string) []byte {
 		type returnBodyValidateChrip struct{
 			Valid bool
 			Errors string
+			CleanedBody string
 		}
-		returnbody := returnBodyValidateChrip{Valid: v, Errors: errs}
+		returnbody := returnBodyValidateChrip{Valid: v, Errors: errs, CleanedBody: msg}
 		res, err := json.Marshal(returnbody)
 		if err != nil{
 			fmt.Println(err)
@@ -52,33 +57,70 @@ func writeResponseValidateChrip(v bool, errs string) []byte {
 		return res
 		
 }
-func validateChirpHandler(w http.ResponseWriter, r *http.Request){
+
+func replaceProfanity(str string) string{
+	dict := map[string]string{"kerfuffle":"****", "sharbert":"****", "fornax":"****"}
+	str = strings.ToLower(str)
+	arrayStr := strings.Split(str," ")
+	for i, x := range(arrayStr){
+		val, ok := dict[x]
+		if ok{
+			arrayStr[i] = val
+		}
+	}
+	return strings.Join(arrayStr, " ")
+}
+
+
+func createChirpHandler(w http.ResponseWriter, r *http.Request){
+	DB, err := database.NewDB(databaseUrl)
+	if err != nil{
+		log.Fatal(err)
+	}
 	header := w.Header()
 	type body struct{
 		Body string
 	}
 	decoder := json.NewDecoder(r.Body)
 	b:=body{}
-	err := decoder.Decode(&b)
+	err = decoder.Decode(&b)
+	b.Body = replaceProfanity(b.Body)
 	if err != nil{
-		res := writeResponseValidateChrip(false, err.Error())
+		res := writeResponseValidateChrip(false, err.Error(), "")
 		header["Content-Type"] = []string{"application/json; charset=utf-8"}
 		w.WriteHeader(500)
 		w.Write(res)
 	}
+	var res string = b.Body
 	if len(b.Body) > 140{
-		res := writeResponseValidateChrip(false, "chrip is too long")	
+		res := writeResponseValidateChrip(false, "chrip is too long", "")	
 		header["Content-Type"] = []string{"application/json; charset=utf-8"}
 		w.WriteHeader(400)
 		w.Write(res)
 		} else{
-		res := writeResponseValidateChrip(true, "")		
+		storedDBJson, _ := DB.CreateChirp(res)
+		res := writeResponseValidateChrip(true, "", string(storedDBJson))		
 		header["Content-Type"] = []string{"application/json; charset=utf-8"}
-		w.WriteHeader(200)
+		w.WriteHeader(201)
 		w.Write(res)
 	}
 }
 
+func getChripHandler(w http.ResponseWriter, r *http.Request){
+	 DB, err := database.NewDB(databaseUrl)
+	 if err!= nil {
+		log.Fatal(err)
+	 }
+	 chripsList , err := DB.GetChirps()
+	 if err != nil{
+		log.Fatal(err)
+	 }
+	header := w.Header()
+	header["Content-Type"] = []string{"text/plain; charset=utf-8"}
+	w.WriteHeader(200)
+	mergedData := strings.Join([]string(chripsList), ", ")
+	w.Write([]byte(mergedData))
+}
 
 func main(){
 	apiconfig := &apiConfig{}
@@ -96,7 +138,8 @@ func main(){
 	})
 	serverMux.HandleFunc("GET /admin/metrics",apiconfig.metricsHandler)
 	serverMux.HandleFunc("GET /admin/reset",apiconfig.resetHandler)
-	serverMux.HandleFunc("POST /api/validate_chirp", validateChirpHandler)
+	serverMux.HandleFunc("POST /api/createChirp", createChirpHandler)
+	serverMux.HandleFunc("GET /api/getChrips", getChripHandler)
 	err := server.ListenAndServe()
 	if err!=nil{
 		fmt.Println(err)
