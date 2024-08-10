@@ -118,8 +118,32 @@ func getChripHandler(w http.ResponseWriter, r *http.Request){
 	header := w.Header()
 	header["Content-Type"] = []string{"text/plain; charset=utf-8"}
 	w.WriteHeader(200)
-	mergedData := strings.Join([]string(chripsList), ", ")
+	mergedData := ""
+	for _,v := range(chripsList){
+		mergedData += string(v)+" ,"
+	}
 	w.Write([]byte(mergedData))
+}
+
+func getChripsbyIDHandler(w http.ResponseWriter, r *http.Request){
+	str := r.PathValue("id")
+	id, err := strconv.Atoi(str)
+	if err != nil{
+		log.Fatal(err)
+	}
+	DB, err := database.NewDB(databaseUrl)
+	if err != nil{
+		log.Fatal(err)
+	}
+	data, err := DB.GetChirps()
+	if err != nil{
+		log.Fatal(err)
+	}
+	header := w.Header()
+	header["Content-Type"] = []string{"text/plain; charset=utf-8"}
+	w.WriteHeader(200)
+	w.Write([]byte(data[id]))
+	
 }
 
 func main(){
@@ -140,6 +164,7 @@ func main(){
 	serverMux.HandleFunc("GET /admin/reset",apiconfig.resetHandler)
 	serverMux.HandleFunc("POST /api/createChirp", createChirpHandler)
 	serverMux.HandleFunc("GET /api/getChrips", getChripHandler)
+	serverMux.HandleFunc("GET /api/getChrips/{id}", getChripsbyIDHandler)
 	err := server.ListenAndServe()
 	if err!=nil{
 		fmt.Println(err)

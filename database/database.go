@@ -57,16 +57,15 @@ func (db *DB) CreateChirp(body string) (Chirp, error){
 }
 
 // GetChirps returns all chirps in the database
-func (db *DB) GetChirps() ([]string, error){
+func (db *DB) GetChirps() (map[int]Chirp, error){
 	dbstruct, err := db.loadDB()
-	result := []string{}
 	if err != nil{
-		return []string{}, err
+		return nil, err
 	}
-	for _,v := range(dbstruct.Chirps){
-		result = append(result, string(v))
-	}
-	return result, nil	
+	// for _,v := range(dbstruct.Chirps){
+	// 	result = append(result, string(v))
+	// }
+	return dbstruct.Chirps, nil	
 }
 
 // loadDB reads the database file into memory
