@@ -162,9 +162,9 @@ func main(){
 	})
 	serverMux.HandleFunc("GET /admin/metrics",apiconfig.metricsHandler)
 	serverMux.HandleFunc("GET /admin/reset",apiconfig.resetHandler)
-	serverMux.HandleFunc("POST /api/createChirp", createChirpHandler)
-	serverMux.HandleFunc("GET /api/getChrips", getChripHandler)
-	serverMux.HandleFunc("GET /api/getChrips/{id}", getChripsbyIDHandler)
+	serverMux.HandleFunc("POST /api/chirps", createChirpHandler)
+	serverMux.HandleFunc("GET /api/chrips", getChripHandler)
+	serverMux.HandleFunc("GET /api/chrips/{id}", getChripsbyIDHandler)
 	err := server.ListenAndServe()
 	if err!=nil{
 		fmt.Println(err)
