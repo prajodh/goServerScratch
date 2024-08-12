@@ -146,6 +146,31 @@ func getChripsbyIDHandler(w http.ResponseWriter, r *http.Request){
 	
 }
 
+func createUsersHandler(w http.ResponseWriter, r *http.Request){
+	header := w.Header()
+	header["Content-Type"] = []string{"application/json; charset=utf-8"}
+	db, err := database.NewDB(databaseUrl)
+	if err != nil{
+		log.Fatal(err)
+	}
+	type email struct{
+		Email  string
+	}
+	decoder := json.NewDecoder(r.Body)
+	e := email{}
+	err = decoder.Decode(&e)
+	if err != nil{
+		log.Fatal(err)
+	}
+	fmt.Println(e)
+	ema, err := db.CreateUsers(e.Email)
+	if err != nil{
+		log.Fatal(err)
+	}
+	w.WriteHeader(201)
+	w.Write([]byte(ema))
+}
+
 func main(){
 	apiconfig := &apiConfig{}
 	serverMux := http.NewServeMux()
@@ -165,6 +190,7 @@ func main(){
 	serverMux.HandleFunc("POST /api/chirps", createChirpHandler)
 	serverMux.HandleFunc("GET /api/chrips", getChripHandler)
 	serverMux.HandleFunc("GET /api/chrips/{id}", getChripsbyIDHandler)
+	serverMux.HandleFunc("POST /api/users", createUsersHandler)
 	err := server.ListenAndServe()
 	if err!=nil{
 		fmt.Println(err)
