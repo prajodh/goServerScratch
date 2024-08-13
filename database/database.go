@@ -61,6 +61,15 @@ func (db *DB)CreateUsers(email string, password string) (string, error){
 
 }
 
+func (db *DB)GetUsers()(map[Email]Password, error){
+	data, err := db.loadDB()
+	if err!= nil{
+		return nil, err
+	}
+	return data.Users, nil
+
+}
+
 
 // CreateChirp creates a new chirp and saves it to disk
 func (db *DB) CreateChirp(body string) (Chirp, error){

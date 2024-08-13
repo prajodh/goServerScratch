@@ -176,6 +176,35 @@ func createUsersHandler(w http.ResponseWriter, r *http.Request){
 	w.Write([]byte(ema))
 }
 
+func loginHandler(w http.ResponseWriter, r *http.Request){
+	header := w.Header()
+	header["Content-Type"] = []string{"application/json; charset=utf-8"}
+	type E struct{
+		Email string
+		Password string
+	} 
+	decoder := json.NewDecoder(r.Body)
+	e := &E{}
+	err := decoder.Decode(e)
+	db, err := database.NewDB(databaseUrl)
+	if err != nil{
+		log.Fatal(err)
+	}
+	users, err := db.GetUsers()
+	if err != nil{
+		log.Fatal(err)
+	}
+	password := users[database.Email(e.Email)]
+    err = bcrypt.CompareHashAndPassword([]byte(password), []byte(e.Password))
+	if err != nil{
+		w.WriteHeader(401)
+		w.Write([]byte("unsucessful login"))
+	} else{
+		w.WriteHeader(200)
+		w.Write([]byte("Succesful Login"))
+	}
+}
+
 func main(){
 	apiconfig := &apiConfig{}
 	serverMux := http.NewServeMux()
@@ -196,6 +225,7 @@ func main(){
 	serverMux.HandleFunc("GET /api/chrips", getChripHandler)
 	serverMux.HandleFunc("GET /api/chrips/{id}", getChripsbyIDHandler)
 	serverMux.HandleFunc("POST /api/users", createUsersHandler)
+	serverMux.HandleFunc("POST /api/login", loginHandler)
 	err := server.ListenAndServe()
 	if err!=nil{
 		fmt.Println(err)
