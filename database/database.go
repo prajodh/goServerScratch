@@ -2,6 +2,8 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"sync"
@@ -13,14 +15,18 @@ type DB struct{
 }
 
 type Chirp string
+type Email string
+type Password string
+
 
 var index int;
 var userIndex int;
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
-	Users map[int]string
-}
+	Users map[Email]Password
+	}
+
 
 // NewDB creates a new database connection
 // and creates the database file if it doesn't exist
@@ -41,7 +47,7 @@ func NewDB(path string) (*DB, error) {
 	return db, nil
 }
 
-func (db *DB)CreateUsers(email string) (string, error){
+func (db *DB)CreateUsers(email string, password string) (string, error){
 	data, err := db.loadDB()
 	if err != nil{
 		return "", err
@@ -49,8 +55,7 @@ func (db *DB)CreateUsers(email string) (string, error){
 	mu := db.max
 	mu.Lock()
 	defer mu.Unlock()
-	userIndex+=1
-	data.Users[userIndex] = email
+	data.Users[Email(email)] = Password(password)
 	db.writeDB(data)
 	return strconv.Itoa(userIndex)+" : "+ email, nil
 
@@ -89,7 +94,10 @@ func (db *DB) GetChirps() (map[int]Chirp, error){
 // loadDB reads the database file into memory
 func (db *DB) loadDB() (DBStructure, error){
 	data, err := os.ReadFile(db.path)
-	dbb := DBStructure{Chirps: map[int]Chirp{}, Users: map[int]string{}}
+	dbb := DBStructure{
+    Chirps: map[int]Chirp{},
+    Users: map[Email]Password{},
+	}
 	if err != nil{
 		return dbb, err
 	}
@@ -103,6 +111,10 @@ func (db *DB) loadDB() (DBStructure, error){
 // writeDB writes the database file to disk
 func (db *DB) writeDB(dbStructure DBStructure) error{
 	data, err := json.Marshal(dbStructure)
+	if err!=nil{
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
 	if err != nil{
 		return err
 	}

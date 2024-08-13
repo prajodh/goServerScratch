@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
+	"golang.org/x/crypto/bcrypt"
 	"github.com/prajodh/goServerScratch/database"
 	// "errors"
 )
@@ -153,17 +153,22 @@ func createUsersHandler(w http.ResponseWriter, r *http.Request){
 	if err != nil{
 		log.Fatal(err)
 	}
-	type email struct{
+	type user struct{
 		Email  string
+		Password string
 	}
 	decoder := json.NewDecoder(r.Body)
-	e := email{}
+	e := user{}
 	err = decoder.Decode(&e)
 	if err != nil{
 		log.Fatal(err)
 	}
-	fmt.Println(e)
-	ema, err := db.CreateUsers(e.Email)
+	encrptedPassword, err := bcrypt.GenerateFromPassword([]byte(e.Password), 10)
+	if err != nil{
+		log.Fatal(err)
+	}
+	e.Password = string(encrptedPassword)
+	ema, err := db.CreateUsers(e.Email, e.Password)
 	if err != nil{
 		log.Fatal(err)
 	}
