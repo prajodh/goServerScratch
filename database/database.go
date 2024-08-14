@@ -47,17 +47,20 @@ func NewDB(path string) (*DB, error) {
 	return db, nil
 }
 
-func (db *DB)CreateUsers(email string, password string) (string, error){
+func (db *DB)CreateUsers(email string, password string) (map[string]string, error){
 	data, err := db.loadDB()
 	if err != nil{
-		return "", err
+		return nil, err
 	}
 	mu := db.max
 	mu.Lock()
 	defer mu.Unlock()
 	data.Users[Email(email)] = Password(password)
 	db.writeDB(data)
-	return strconv.Itoa(userIndex)+" : "+ email, nil
+	returnpayload := map[string]string{}
+	returnpayload["email"] = email
+	returnpayload["index"] = strconv.Itoa(userIndex)
+	return returnpayload, nil
 
 }
 

@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
-	"golang.org/x/crypto/bcrypt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	"github.com/prajodh/goServerScratch/database"
+	"golang.org/x/crypto/bcrypt"
 	// "errors"
 )
 
@@ -172,11 +177,13 @@ func createUsersHandler(w http.ResponseWriter, r *http.Request){
 	if err != nil{
 		log.Fatal(err)
 	}
+	
 	w.WriteHeader(201)
-	w.Write([]byte(ema))
+	w.Write([]byte(ema["email"]))
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request){
+	
 	header := w.Header()
 	header["Content-Type"] = []string{"application/json; charset=utf-8"}
 	type E struct{
@@ -194,18 +201,39 @@ func loginHandler(w http.ResponseWriter, r *http.Request){
 	if err != nil{
 		log.Fatal(err)
 	}
+	method := jwt.SigningMethodHS256
+	claims := jwt.RegisteredClaims{
+        Issuer:    "chirpy",
+        IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
+        ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(time.Duration(86400) * time.Second)),
+    }
+	secret := os.Getenv("JWT_SECRET")
+	token := jwt.NewWithClaims(method, claims)
+	completetoken, err := token.SignedString([]byte(secret))
+	if err != nil{
+		log.Fatal(err)
+	}
 	password := users[database.Email(e.Email)]
     err = bcrypt.CompareHashAndPassword([]byte(password), []byte(e.Password))
+	returnPayload := map[string]string{}
+	returnPayload["email"] = string(users[database.Email("email")])
+	returnPayload["token"] = completetoken
+	marshalledata, err := json.Marshal(returnPayload)
+	if err != nil{
+		log.Fatal(marshalledata)
+	}
+
 	if err != nil{
 		w.WriteHeader(401)
 		w.Write([]byte("unsucessful login"))
 	} else{
 		w.WriteHeader(200)
-		w.Write([]byte("Succesful Login"))
+		w.Write([]byte(marshalledata))
 	}
 }
 
 func main(){
+	godotenv.Load()
 	apiconfig := &apiConfig{}
 	serverMux := http.NewServeMux()
 	server := http.Server{Handler: serverMux}
